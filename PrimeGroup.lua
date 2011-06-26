@@ -75,6 +75,29 @@ function PrimeGroup.GetLeader()
   end
 end
 
+function PrimeGroup.GetLootMaster()
+
+	local method, partyMaster, raidMaster = GetLootMethod();
+	
+	--Looting must be set to Master Looter
+	if (method ~= "master") then
+		return nil;
+	end
+	
+	--Check if in raid
+	if (raidMaster ~= nil) then
+		return UnitName( "raid"..raidMaster );
+	end
+	
+	--Check if in party
+	if (partyMaster ~= nil) then
+		return UnitName( "party"..partyMaster );
+	end
+	
+	--Doesn't exist
+	return nil;
+end
+
 function PrimeGroup.GetClassColor( unitName )
 	
 	local class, classFile = UnitClass( unitName );
