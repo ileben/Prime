@@ -254,6 +254,117 @@ function PrimeUtil.UpdateMenu (menu)
 end
 
 
+function PrimeUtil.CompareVersions (old, new)
+
+  --Return false if both version the same
+  if (new == old) then return false end
+  
+  --Walk through all the numbers in the version
+  local newNumbers = { strsplit( ".", new ) };
+  local oldNumbers = { strsplit( ".", old ) };
+  for i=1,table.getn(newNumbers) do
+    
+    --New version is bigger if all previous numbers same
+    --and new version has additional numbers to old one
+    if (i > table.getn(oldNumbers)) then return true end
+    
+    --Convert both strings to numbers
+    local newNum = tonumber( newNumbers[i] );
+    local oldNum = tonumber( oldNumbers[i] );
+    
+    --New version is bigger or smaller if
+    --current number is bigger or smaller
+    if (newNum > oldNum) then return true end
+    if (newNum < oldNum) then return false end
+    
+  end
+  
+  --Old version is bigger if all previous numbers same
+  --and old version has additional numbers to new one
+  return false;
+end
+
+function PrimeUtil.CheckSettings()
+   
+  --Check if global settings missing (first time use)
+  if (not ChronoBars_Settings) then
+    ChronoBars.Print( "Applying default settings" );
+    ChronoBars_Settings = CopyTable( ChronoBars.DEFAULT_SETTINGS );
+  end
+  
+  --Check if character settings missing (first time use)
+  if (not ChronoBars_CharSettings) then
+    ChronoBars.Print( "Applying default character settings" );
+    ChronoBars_CharSettings = CopyTable( ChronoBars.DEFAULT_CHAR_SETTINGS );
+    
+    --Create profile for this character first time if missing
+    local playerName = UnitName( "player" );
+    if (ChronoBars_Settings.profiles[ playerName ] == nil) then
+      ChronoBars_Settings.profiles[ playerName ] = CopyTable( ChronoBars.DEFAULT_PROFILE );
+    end
+    
+    --Switch to profile with this character name
+    ChronoBars_CharSettings.activeProfile = playerName;
+  end
+  
+  --Check for old settings version
+  local curVersion = ChronoBars_Settings.version;
+  for i=1,table.getn( ChronoBars.UPGRADE_LIST ) do
+    
+    local nextVersion = ChronoBars.UPGRADE_LIST[i];
+    if (CB.CompareVersions( curVersion, nextVersion )) then
+
+      CB.Print( "Upgrading settings from version "
+        ..curVersion.." to "..nextVersion );
+      
+      local verString = string.gsub( nextVersion, "[.]", "_" );
+      local funcName = "Upgrade_"..verString;
+      local func = ChronoBars[ funcName ];
+      
+      if (func) then func() else
+        CB.Print( "Missing upgrade function!" );
+      end
+      
+      curVersion = nextVersion;
+    end
+  end
+  
+  --Check for old char settings version
+  local curVersion = ChronoBars_CharSettings.version;
+  for i=1,table.getn( ChronoBars.UPGRADE_LIST ) do
+    
+    local nextVersion = ChronoBars.UPGRADE_LIST[i];
+    if (CB.CompareVersions( curVersion, nextVersion )) then
+    
+      ChronoBars.Print( "Upgrading character settings from version "
+        ..curVersion.." to "..nextVersion );
+      
+      local verString = string.gsub( nextVersion, "[.]", "_" );
+      local funcName = "UpgradeChar_"..verString;
+      local func = ChronoBars[ funcName ];
+      
+      if (func) then func() else
+        ChronoBars.Print( "Missing upgrade function!" );
+      end
+      
+      curVersion = nextVersion;
+    end
+  end
+
+  --Set to latest version
+  ChronoBars_Settings.version = ChronoBars.VERSION;
+  ChronoBars_CharSettings.version = ChronoBars.VERSION;
+  
+  --Switch to default profile if active profile is missing
+  if (ChronoBars_Settings.profiles[ ChronoBars_CharSettings.activeProfile ] == nil) then
+    ChronoBars_CharSettings.activeProfile = "Default";
+  end
+  
+end
+
+
+
+
 --[[
 --Obsolete, but keeping it around just in case it
 --comes in handy one day
