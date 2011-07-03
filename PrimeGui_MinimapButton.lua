@@ -28,6 +28,16 @@ local minimapShapes =
 	["TRICORNER-BOTTOMRIGHT"] = {true, true, true, false},
 }
 
+-- Tooltip code ripped from StatBlockCore by Funkydude
+local function getAnchors(frame)
+	local x, y = frame:GetCenter()
+	if not x or not y then return "CENTER" end
+	local hhalf = (x > UIParent:GetWidth()*2/3) and "RIGHT" or (x < UIParent:GetWidth()/3) and "LEFT" or ""
+	local vhalf = (y > UIParent:GetHeight()/2) and "TOP" or "BOTTOM"
+	return vhalf..hhalf, frame, (vhalf == "TOP" and "BOTTOM" or "TOP")..hhalf
+end
+
+
 function PrimeGui.MinimapButton_New( name )
 
 	local button = CreateFrame("Button", name, Minimap)
@@ -51,41 +61,93 @@ function PrimeGui.MinimapButton_New( name )
 	
 	local icon = button:CreateTexture(nil, "ARTWORK")
 	icon:SetWidth(20); icon:SetHeight(20)
-	--icon:SetTexture(object.icon)
 	icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
 	icon:SetPoint("TOPLEFT", 7, -5)
 	button.icon = icon
 	
-	button:SetScript("OnEnter", 	PrimeGui.MinimapButton_OnEnter)
-	button:SetScript("OnLeave", 	PrimeGui.MinimapButton_OnLeave)
-	button:SetScript("OnClick", 	PrimeGui.MinimapButton_OnClick)
-	button:SetScript("OnDragStart", PrimeGui.MinimapButton_OnDragStart)
-	button:SetScript("OnDragStop", 	PrimeGui.MinimapButton_OnDragStop)
-	button:SetScript("OnMouseDown", PrimeGui.MinimapButton_OnMouseDown)
-	button:SetScript("OnMouseUp", 	PrimeGui.MinimapButton_OnMouseUp)
+	button:SetScript("OnClick", 	PrimeGui.MinimapButton_OnClick);
+	button:SetScript("OnEnter", 	PrimeGui.MinimapButton_OnEnter);
+	button:SetScript("OnLeave", 	PrimeGui.MinimapButton_OnLeave);
+	button:SetScript("OnDragStart", PrimeGui.MinimapButton_OnDragStart);
+	button:SetScript("OnDragStop", 	PrimeGui.MinimapButton_OnDragStop);
+	button:SetScript("OnMouseDown", PrimeGui.MinimapButton_OnMouseDown);
+	button:SetScript("OnMouseUp", 	PrimeGui.MinimapButton_OnMouseUp);
+	
+	--Internal vars
+	button.minimapPos = 225;
 	
 	--Functions
 	PrimeGui.Object_New( button );
-	button.UpdatePosition = PrimeGui.MinimapButton_UpdatePosition;
+	button.SetIcon 			= PrimeGui.MinimapButton_SetIcon;
+	button.SetPosition 		= PrimeGui.MinimapButton_SetPosition;
+	button.GetPosition 		= PrimeGui.MinimapButton_GetPosition;
+	button.UpdatePosition	= PrimeGui.MinimapButton_UpdatePosition;
 	
 	--Init
 	button:UpdatePosition();
 	return button;
 end
 
+function PrimeGui.MinimapButton_SetIcon( button, path )
+	button.icon:SetTexture(path);
+end
+
+function PrimeGui.MinimapButton_SetPosition( button, pos )
+	button.minimapPos = pos;
+	button:UpdatePosition();
+end
+
+function PrimeGui.MinimapButton_GetPosition( button )
+	return button.minimapPos;
+end
+
+function PrimeGui.MinimapButton_OnClick( button, mouseButton, down )
+	if (button.OnClick) then
+		button.OnClick( button, mouseButton, down );
+	end
+end
+
+function PrimeGui.MinimapButton_OnMouseDown( button )
+	button.icon:SetTexCoord(0, 1, 0, 1);
+end
+
+function PrimeGui.MinimapButton_OnMouseUp( button )
+	button.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95);
+end
+
+function PrimeGui.MinimapButton_OnEnter( button )
+	
+	if (button.isMoving) then
+		return;
+	end
+	
+	if (button.OnTooltipShow) then
+		GameTooltip:SetOwner(button, "ANCHOR_NONE");
+		GameTooltip:SetPoint(getAnchors(button));
+		button:OnTooltipShow(GameTooltip);
+		GameTooltip:Show();
+	end
+end
+
+function PrimeGui.MinimapButton_OnLeave( button )
+	GameTooltip:Hide();
+end
+
 function PrimeGui.MinimapButton_OnDragStart( button )
-	--button:LockHighlight()
-	--button.icon:SetTexCoord(0, 1, 0, 1)
-	--button.isMoving = true
-	--GameTooltip:Hide()
-	button:SetScript("OnUpdate", PrimeGui.MinimapButton_OnUpdate)
+
+	GameTooltip:Hide();
+	button:LockHighlight();
+	button.icon:SetTexCoord(0, 1, 0, 1);
+	button:SetScript("OnUpdate", PrimeGui.MinimapButton_OnUpdate);
+	button.isMoving = true;
 end
 
 function PrimeGui.MinimapButton_OnDragStop( button )
-	--self.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95)
-	--self:UnlockHighlight()
-	--self.isMoving = nil
-	button:SetScript("OnUpdate", nil)
+
+	button:UnlockHighlight();
+	button.icon:SetTexCoord(0.05, 0.95, 0.05, 0.95);
+	button:SetScript("OnUpdate", nil);
+	button.isMoving = false;
 end
 
 function PrimeGui.MinimapButton_OnUpdate( button )
@@ -99,11 +161,15 @@ function PrimeGui.MinimapButton_OnUpdate( button )
 	button.minimapPos = math.deg(math.atan2(py - my, px - mx)) % 360;
 	
 	button:UpdatePosition();
+	
+	if (button.OnPositionChanged) then
+		button:OnPositionChanged( button.minimapPos );
+	end
 end
 
 function PrimeGui.MinimapButton_UpdatePosition( button )
 
-	local angle = math.rad(button.minimapPos or 225)
+	local angle = math.rad(button.minimapPos)
 	local x, y, q = math.cos(angle), math.sin(angle), 1
 	if x < 0 then q = q + 1 end
 	if y > 0 then q = q + 2 end
