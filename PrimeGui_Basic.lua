@@ -85,14 +85,12 @@ function PrimeGui.Input_OnFocusGained( input )
 end
 
 function PrimeGui.Input_OnFocusLost( input )
-	local frame = input.frame;
-	input:SetText( frame.oldValue );
-end
 
-function PrimeGui.Input_OnEscapePressed( input )
 	local frame = input.frame;
-	input:SetText( frame.oldValue );
-	input:ClearFocus();
+	frame.oldValue = input:GetText();
+	
+	local script = frame.OnValueChanged;
+	if (script) then script( frame ); end
 end
 
 function PrimeGui.Input_OnEnterPressed( input )
@@ -103,6 +101,12 @@ function PrimeGui.Input_OnEnterPressed( input )
 	
 	local script = frame.OnValueChanged;
 	if (script) then script( frame ); end
+end
+
+function PrimeGui.Input_OnEscapePressed( input )
+	local frame = input.frame;
+	input:SetText( frame.oldValue );
+	input:ClearFocus();
 end
 
 function PrimeGui.Input_OnSizeChanged( input )
